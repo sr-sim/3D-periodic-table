@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Login</title>
+    <meta name="google-signin-client_id" content="241832232527-lmah2st7pe0qf4eip30qc1sd2m3mofmj.apps.googleusercontent.com">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Arial', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .login-container {
+        background: white;
+        padding: 40px 30px;
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        text-align: center;
+        width: 100%;
+        max-width: 400px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .welcome-text {
+        font-size: clamp(24px, 5vw, 28px);
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+
+      .subtitle {
+        font-size: clamp(14px, 3vw, 16px);
+        color: #666;
+        margin-bottom: 30px;
+        text-align: center;
+        line-height: 1.4;
+      }
+
+      .g_id_signin {
+        margin: 20px 0;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+      }
+
+      /* Ensure Google button container is centered */
+      .g_id_signin > div {
+        margin: 0 auto !important;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 480px) {
+        body {
+          padding: 15px;
+        }
+        
+        .login-container {
+          padding: 30px 20px;
+          border-radius: 15px;
+        }
+        
+        .welcome-text {
+          margin-bottom: 8px;
+        }
+        
+        .subtitle {
+          margin-bottom: 25px;
+        }
+        
+        .g_id_signin {
+          margin: 15px 0;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .login-container {
+          padding: 25px 15px;
+        }
+        
+        .welcome-text {
+          font-size: 22px;
+        }
+        
+        .subtitle {
+          font-size: 13px;
+        }
+      }
+
+      /* For very small screens */
+      @media (max-width: 320px) {
+        body {
+          padding: 10px;
+        }
+        
+        .login-container {
+          padding: 20px 15px;
+        }
+      }
+
+      /* Animation for smooth transitions */
+      .login-container {
+        transition: all 0.3s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="welcome-text">Welcome Back</div>
+      <div class="subtitle">Sign in to access your 3D data visualization</div>
+      
+      <div id="g_id_onload"
+           data-client_id="241832232527-lmah2st7pe0qf4eip30qc1sd2m3mofmj.apps.googleusercontent.com"
+           data-login_uri="https://your-redirect-url-if-needed"
+           data-auto_prompt="false">
+      </div>
+      
+      <div class="g_id_signin" data-type="standard" data-theme="filled_blue" data-size="large" data-text="signin_with" data-shape="pill"></div>
+    </div>
+
+    <script>
+      // Initialize Google Sign-In
+      window.onload = () => {
+        google.accounts.id.initialize({
+          client_id: "241832232527-lmah2st7pe0qf4eip30qc1sd2m3mofmj.apps.googleusercontent.com",
+          callback: handleCredentialResponse
+        });
+
+        // Render the button with centered alignment
+        google.accounts.id.renderButton(
+          document.querySelector(".g_id_signin"),
+          { 
+            theme: "filled_blue", 
+            size: "large", 
+            text: "signin_with",
+            shape: "pill",
+            width: document.querySelector('.g_id_signin').offsetWidth - 40 // Responsive width
+          }
+        );
+
+        // Optional: Also display the One Tap dialog
+        google.accounts.id.prompt();
+
+        // Update button width on window resize
+        window.addEventListener('resize', function() {
+          const buttonContainer = document.querySelector('.g_id_signin');
+          const googleButton = buttonContainer.querySelector('div');
+          if (googleButton) {
+            googleButton.style.width = '100%';
+            googleButton.style.margin = '0 auto';
+          }
+        });
+      };
+
+      // Callback after successful login
+    function handleCredentialResponse(response) {
+      const data = JSON.parse(atob(response.credential.split('.')[1]));
+      console.log("Logged in as:", data);
+
+      // Save to sessionStorage instead of localStorage
+      sessionStorage.setItem("googleUser", JSON.stringify(data));
+
+      // Show welcome message briefly before redirecting
+      document.querySelector('.welcome-text').textContent = `Welcome, ${data.name}!`;
+      document.querySelector('.subtitle').textContent = 'Redirecting to your dashboard...';
+
+      setTimeout(() => {
+        window.location.href = "css3d_periodictable.html"; 
+      }, 1500);
+    }
+
+    </script>
+  </body>
+</html>
