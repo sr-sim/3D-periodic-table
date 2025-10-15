@@ -88,6 +88,7 @@
 			<button id="sphere">SPHERE</button>
 			<button id="helix">HELIX</button>
 			<button id="grid">GRID</button>
+			<button id="pyramid">PYRAMID</button>
 		</div>
 		<script>
 		// Check if user is logged in
@@ -250,7 +251,7 @@
 			let camera, scene, renderer, controls;
 
 			const objects = [];
-			const targets = { table: [], sphere: [], helix: [], grid: [] };
+			const targets = { table: [], sphere: [], helix: [], grid: [], pyramid: [] };
 
 			init();
 			animate();
@@ -264,8 +265,8 @@
 				// table
 
 				const rows = await fetchSheetData();
-				const headers = rows[0];
-				const data = rows.slice(1);
+				const headers = null;
+				const data = rows;
 
 				data.forEach((row, i) => {
 					const [name, photo, age, country, interest, netWorth] = row;
@@ -337,7 +338,6 @@
 				}
 
 				// === Double Helix ===
-				// === Double Helix with Proper Spacing ===
 				for (let i = 0, l = objects.length; i < l; i++) {
 				const turns = 8; // Many turns to spread out
 				const theta = i * 0.08 + Math.PI; // Very slow progression
@@ -382,6 +382,93 @@
 					targets.grid.push(object);
 				}
 
+				// === TETRAHEDRON (4 faces) layout ===
+				const pyramidRadius = 900;
+				const offsetDistance = 120;   
+				const layerSeparation = 80; 
+				const cardSpacing = 1.25; 
+				const intraRowSpacing = 1.15; 
+				const interRowSpacing = 1.15; 
+				const worldUp = new THREE.Vector3(0, 1, 0);
+				const elementsPerFace = Math.ceil(objects.length / 4);
+
+				const tetra = new THREE.TetrahedronGeometry(pyramidRadius, 0);
+				tetra.computeVertexNormals();
+				const rotMat = new THREE.Matrix4().makeRotationX(Math.PI / 2.7);
+				tetra.applyMatrix4(rotMat);
+
+				const posAttr = tetra.getAttribute('position');
+				const faceData = [];
+				for (let i = 0; i < posAttr.count; i += 3) {
+				const a = new THREE.Vector3().fromBufferAttribute(posAttr, i);
+				const b = new THREE.Vector3().fromBufferAttribute(posAttr, i + 1);
+				const c = new THREE.Vector3().fromBufferAttribute(posAttr, i + 2);
+
+				const center = new THREE.Vector3().add(a).add(b).add(c).divideScalar(3);
+				let normal = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a)).normalize();
+				if (normal.dot(center) < 0) normal.negate(); 
+				faceData.push({ a, b, c, center, normal });
+				}
+
+				// === Wireframe Debug ===
+				{
+				const wire = new THREE.LineSegments(
+					new THREE.EdgesGeometry(tetra),
+					new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5 })
+				);
+				scene.add(wire);
+				}
+
+				let globalIndex = 0;
+				for (let f = 0; f < faceData.length; f++) {
+				const { a, b, c, normal } = faceData[f];
+
+				const verts = [a, b, c].sort((v1, v2) => v2.y - v1.y);
+				const apex = verts[0];
+				const base1 = verts[1];
+				const base2 = verts[2];
+
+				let rows = 0, cap = 0;
+				while (cap < elementsPerFace) { rows++; cap += rows; if (rows > 40) break; }
+
+				for (let rIdx = 0; rIdx < rows; rIdx++) {
+					const t = rows === 1 ? 0 : (rIdx / (rows - 1));
+					const tAdj = (t - 0.5) * interRowSpacing + 0.5;
+					const start = apex.clone().lerp(base2, tAdj);
+					const end = apex.clone().lerp(base1, tAdj);
+					const cols = rIdx + 1;
+
+					for (let k = 0; k < cols; k++) {
+					if (globalIndex >= objects.length) break;
+
+					const s = cols === 1 ? 0.5 : (k / (cols - 1));
+
+					const sAdj = (s - 0.5) * intraRowSpacing + 0.5;
+					const posOnFace = start.clone().lerp(end, sAdj);
+
+					const faceCenter = new THREE.Vector3().add(apex).add(base1).add(base2).divideScalar(3);
+					posOnFace.sub(faceCenter).multiplyScalar(cardSpacing).add(faceCenter);
+
+					posOnFace.add(normal.clone().multiplyScalar(offsetDistance));
+
+					posOnFace.add(normal.clone().multiplyScalar(layerSeparation));
+
+					const lookDir = normal.clone().normalize();
+					const right = new THREE.Vector3().crossVectors(worldUp, lookDir).normalize();
+					const adjustedUp = new THREE.Vector3().crossVectors(lookDir, right).normalize();
+					const mat = new THREE.Matrix4().makeBasis(right, adjustedUp, lookDir);
+					const quat = new THREE.Quaternion().setFromRotationMatrix(mat);
+
+					const obj = new THREE.Object3D();
+					obj.position.copy(posOnFace);
+					obj.quaternion.copy(quat);
+
+					targets.pyramid.push(obj);
+					globalIndex++;
+					}
+				}
+				}
+				// === RENDERER ===
 				renderer = new CSS3DRenderer();
 				renderer.setSize(window.innerWidth, window.innerHeight);
 				document.getElementById('container').appendChild(renderer.domElement);
@@ -396,6 +483,7 @@
 				document.getElementById('sphere').onclick = () => transform(targets.sphere, 2000);
 				document.getElementById('helix').onclick = () => transform(targets.helix, 2000);
 				document.getElementById('grid').onclick = () => transform(targets.grid, 2000);
+				document.getElementById('pyramid').onclick = () => transform(targets.pyramid, 2000);
 
 				transform(targets.table, 2000);
 
